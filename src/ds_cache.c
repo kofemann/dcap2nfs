@@ -1,3 +1,5 @@
+#include <rpc/clnt.h>
+#include <netconfig.h>
 #include "nfs41_client.h"
 #include "list.h"
 #include <pthread.h>
