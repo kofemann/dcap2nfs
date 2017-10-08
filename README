@@ -1,0 +1,13 @@
+dcap2nfs
+=========
+Use nfsv4.1 for DCAP data channel
+
+Building from sources
+---------------------
+```
+$ ./bootstrap.sh
+```
+
+License
+-------
+LGPL v3
