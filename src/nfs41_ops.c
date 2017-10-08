@@ -399,15 +399,16 @@ nfs_write(nfs_session_t *session, nfs_fh4 fh, stateid4 stateid,
     COMPOUND4res c_res;
     nfs_argop4 op[3];
 
-    op[0].argop = OP_SEQUENCE;
-    op[0].nfs_argop4_u.opsequence.sa_cachethis = 1;
-    op[0].nfs_argop4_u.opsequence.sa_sequenceid = session->client->sequenceid;
-    memcpy(op[0].nfs_argop4_u.opsequence.sa_sessionid, session->session_id, NFS4_SESSIONID_SIZE);
-    ++session->slot_table.last_used;
-    op[0].nfs_argop4_u.opsequence.sa_slotid = session->slot_table.last_used;
+    int session_slot;
 
-    session->slot_table.seq[session->slot_table.last_used]++;
-    session->slot_table.used[session->slot_table.last_used] = 1;
+    // find slot id to use
+    session_slot = find_session_slot(session);
+
+    op[0].argop = OP_SEQUENCE;
+    op[0].nfs_argop4_u.opsequence.sa_slotid = session_slot;
+    op[0].nfs_argop4_u.opsequence.sa_sequenceid = session->slot_table.seq[session_slot];
+    op[0].nfs_argop4_u.opsequence.sa_cachethis = 0;
+    memcpy(op[0].nfs_argop4_u.opsequence.sa_sessionid, session->session_id, NFS4_SESSIONID_SIZE);
 
     op[1].argop = OP_PUTFH;
     op[1].nfs_argop4_u.opputfh.object.nfs_fh4_len = fh.nfs_fh4_len;
@@ -423,5 +424,7 @@ nfs_write(nfs_session_t *session, nfs_fh4 fh, stateid4 stateid,
 
     compound_init(&c_args, &c_res, op, 3, "write");
 
+
+    release_session_slot(session, session_slot);
     return 0;
 }
