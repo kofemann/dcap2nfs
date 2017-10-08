@@ -54,7 +54,7 @@ typedef struct {
     nfs_impl_id4 iid;
 } nfs_server_t;
 
-#define MAX_SLOT 128
+#define MAX_SLOT 16
 typedef struct {
     uint32_t seq[MAX_SLOT];
     uint32_t used[MAX_SLOT];
@@ -79,4 +79,3 @@ rpc_client_t* get_client(netaddr4 *addr);
 #endif
 
 #endif	/* NFS41_CLIENT_H */
-
