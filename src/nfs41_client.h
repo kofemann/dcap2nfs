@@ -60,7 +60,6 @@ typedef struct {
     pthread_cond_t slot_free;
     uint32_t seq[MAX_SLOT];
     uint32_t used[MAX_SLOT];
-    uint32_t last_used;
 } slot_table_t;
 
 typedef struct {

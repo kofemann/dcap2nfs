@@ -272,7 +272,6 @@ create_session(nfs_session_t *session)
     memset(&session->slot_table.used, 0, sizeof(session->slot_table.used));
     memset(&session->slot_table.seq, 0, sizeof(session->slot_table.seq));
     session->client->sequenceid++;
-    session->slot_table.last_used = 0;
     session->is_valid = 1;
     pthread_create(&session->sequence_thread, NULL, sequence_thread, session);
     return 0;
