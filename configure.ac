@@ -10,7 +10,7 @@ AC_MSG_ERROR([pthread was not found])
 ])
 
 AC_SEARCH_LIBS([clnt_tli_create], [tirpc], [TIRPC="-ltirpc"],[
-AC_MSG_ERROR([pthread was not found])
+AC_MSG_ERROR([clnt_tli_create was not found])
 ])
 
 AC_CHECK_HEADERS([rpc/clnt.h], [], [
