@@ -36,15 +36,11 @@ int main(int argc, char** argv) {
 
     session.client = &nfs_client;
     session.flags = 0;
-    session.client->sequenceid = 0;
+    session.client->sequenceid = 1;
 
     create_session(&session);
-    sequence(&session);
-    sequence(&session);
-    sequence(&session);
 
     pthread_join(session.sequence_thread, NULL);
     destroy_session(&session);
     return (EXIT_SUCCESS);
 }
-
