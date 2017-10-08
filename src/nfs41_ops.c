@@ -193,7 +193,6 @@ void * sequence_thread(void *arg) {
 
     while (1) {
         pthread_mutex_lock(&session->client->lock);
-        printf("sthread\n");
         if (!session->is_valid) {
             pthread_mutex_unlock(&session->client->lock);
             break;
@@ -291,14 +290,16 @@ sequence(nfs_session_t *session)
     rpc_client_t *rpc_client;
     SEQUENCE4resok *cs_res;
 
-    op.argop = OP_SEQUENCE;
-    op.nfs_argop4_u.opsequence.sa_cachethis = 1;
-    op.nfs_argop4_u.opsequence.sa_sequenceid = session->client->sequenceid;
-    memcpy(op.nfs_argop4_u.opsequence.sa_sessionid, session->session_id, NFS4_SESSIONID_SIZE);
-    ++session->slot_table.last_used;
+    // find slot id to use
+    session->slot_table.last_used = ++session->slot_table.last_used % MAX_SLOT;
     op.nfs_argop4_u.opsequence.sa_slotid = session->slot_table.last_used;
     session->slot_table.seq[session->slot_table.last_used]++;
     session->slot_table.used[session->slot_table.last_used] = 1;
+
+    op.argop = OP_SEQUENCE;
+    op.nfs_argop4_u.opsequence.sa_cachethis = 1;
+    op.nfs_argop4_u.opsequence.sa_sequenceid = session->slot_table.seq[session->slot_table.last_used];
+    memcpy(op.nfs_argop4_u.opsequence.sa_sessionid, session->session_id, NFS4_SESSIONID_SIZE);
 
     compound_init(&c_args, &c_res, &op, 1, "sequence");
 
