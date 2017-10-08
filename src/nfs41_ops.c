@@ -268,9 +268,11 @@ create_session(nfs_session_t *session)
         goto err1;
 
     cs_res = &c_res.resarray.resarray_val[0].nfs_resop4_u.opcreate_session.CREATE_SESSION4res_u.csr_resok4;
+    session->fore_chan_attrs.ca_maxrequests = MIN(cs_res->csr_fore_chan_attrs.ca_maxrequests, MAX_SLOT);
     memcpy(session->session_id, cs_res->csr_sessionid, NFS4_SESSIONID_SIZE);
-    memset(&session->slot_table.used, 0, sizeof(session->slot_table.used));
-    memset(&session->slot_table.seq, 0, sizeof(session->slot_table.seq));
+
+    session->slot_table.used = calloc(session->fore_chan_attrs.ca_maxrequests, sizeof(uint32_t));
+    session->slot_table.seq = calloc(session->fore_chan_attrs.ca_maxrequests, sizeof(uint32_t));
     session->client->sequenceid++;
     session->is_valid = 1;
     pthread_create(&session->sequence_thread, NULL, sequence_thread, session);
@@ -291,7 +293,7 @@ find_session_slot(nfs_session_t *session)
     int found = 0;
     pthread_mutex_lock(&session->slot_table.lock);
     do {
-        for(i = 0; i < MAX_SLOT; i++) {
+        for(i = 0; i < session->fore_chan_attrs.ca_maxrequests; i++) {
             if (!session->slot_table.used[i]) {
                 found = 1;
                 goto out;
@@ -384,6 +386,8 @@ destroy_session(nfs_session_t *session)
         goto err1;
 
     session->is_valid = 0;
+    free(session->slot_table.seq);
+    free(session->slot_table.used);
     return 0;
 err1:
     return -1;
