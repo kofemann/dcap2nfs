@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 #include "nfs41_client.h"
 #include "nfsv41_ops.h"
 
@@ -34,6 +35,8 @@ int main(int argc, char** argv) {
     exchange_id(&nfs_client, 0);
     printf("client id: 0x%lx\n", nfs_client.clientid);
 
+    pthread_mutex_init(&session.slot_table.lock, NULL);
+    pthread_cond_init(&session.slot_table.slot_free, NULL);
     session.client = &nfs_client;
     session.flags = 0;
     session.client->sequenceid = 1;

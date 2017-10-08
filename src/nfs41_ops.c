@@ -280,6 +280,53 @@ create_session(nfs_session_t *session)
     return -1;
 }
 
+
+/**
+* Find next available session slot. Block if required.
+*/
+int
+find_session_slot(nfs_session_t *session)
+{
+    int i;
+    int rc;
+    int found = 0;
+    pthread_mutex_lock(&session->slot_table.lock);
+    do {
+        for(i = 0; i < MAX_SLOT; i++) {
+            if (!session->slot_table.used[i]) {
+                found = 1;
+                goto out;
+            } else {
+                printf("0x%lx: Slot in use: %d %d %d\n", session->client->clientid, i,
+                    session->slot_table.used[i], session->slot_table.seq[i]);
+            }
+        }
+        printf("0x%lx: All slots busy. Wating...\n", session->client->clientid);
+        rc = pthread_cond_wait(&session->slot_table.slot_free, &session->slot_table.lock);
+        if (rc) {
+            perror("cond wait");
+        }
+    } while(!found);
+
+out:
+    printf("0x%lx: Using slot %d\n", session->client->clientid, i);
+    session->slot_table.used[i] = 1;
+    pthread_mutex_unlock(&session->slot_table.lock);
+    return i;
+}
+
+int
+release_session_slot(nfs_session_t *session, int slot)
+{
+    printf("0x%lx: Releasing slot %d\n", session->client->clientid, slot);
+    pthread_mutex_lock(&session->slot_table.lock);
+    pthread_cond_broadcast(&session->slot_table.slot_free);
+    session->slot_table.used[slot] = 0;
+    pthread_mutex_unlock(&session->slot_table.lock);
+    return 0;
+}
+
+
 int
 sequence(nfs_session_t *session)
 {
@@ -289,16 +336,16 @@ sequence(nfs_session_t *session)
     nfs_argop4 op;
     rpc_client_t *rpc_client;
     SEQUENCE4resok *cs_res;
+    int session_slot;
 
     // find slot id to use
-    session->slot_table.last_used = ++session->slot_table.last_used % MAX_SLOT;
-    op.nfs_argop4_u.opsequence.sa_slotid = session->slot_table.last_used;
-    session->slot_table.seq[session->slot_table.last_used]++;
-    session->slot_table.used[session->slot_table.last_used] = 1;
+    session_slot = find_session_slot(session);
 
     op.argop = OP_SEQUENCE;
+    op.nfs_argop4_u.opsequence.sa_slotid = session_slot;
+    op.nfs_argop4_u.opsequence.sa_highest_slotid = MAX_SLOT - 1;
     op.nfs_argop4_u.opsequence.sa_cachethis = 1;
-    op.nfs_argop4_u.opsequence.sa_sequenceid = session->slot_table.seq[session->slot_table.last_used];
+    op.nfs_argop4_u.opsequence.sa_sequenceid = session->slot_table.seq[session_slot];
     memcpy(op.nfs_argop4_u.opsequence.sa_sessionid, session->session_id, NFS4_SESSIONID_SIZE);
 
     compound_init(&c_args, &c_res, &op, 1, "sequence");
@@ -309,7 +356,8 @@ sequence(nfs_session_t *session)
     /*
      * FIXME:
      */
-    session->slot_table.used[session->slot_table.last_used] = 0;
+    session->slot_table.seq[session_slot]++;
+    release_session_slot(session, session_slot);
     cs_res = &c_res.resarray.resarray_val[0].nfs_resop4_u.opsequence.SEQUENCE4res_u.sr_resok4;
     return 0;
  err1:

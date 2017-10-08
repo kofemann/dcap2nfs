@@ -56,6 +56,8 @@ typedef struct {
 
 #define MAX_SLOT 16
 typedef struct {
+    pthread_mutex_t lock;
+    pthread_cond_t slot_free;
     uint32_t seq[MAX_SLOT];
     uint32_t used[MAX_SLOT];
     uint32_t last_used;
